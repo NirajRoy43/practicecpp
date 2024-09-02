@@ -66,3 +66,8 @@ main {
 #submit-code:hover {
     background-color: #555;
 }
+
+#result-display {
+    white-space: pre-wrap;
+    font-family: monospace;
+}
