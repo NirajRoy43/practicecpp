@@ -1,12 +1,19 @@
 #include "../external/include/crow.h"
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <fstream>
 #include <sstream>
 #include <cstdlib>
 #include <memory>
 #include <stdexcept>
 #include <array>
+
+struct User {
+    std::string username;
+    std::string password_hash; // In a real app, you'd want to properly hash passwords
+    std::vector<std::string> solved_questions;
+};
 
 struct Question {
     std::string difficulty;
@@ -29,6 +36,8 @@ std::vector<Question> questions = {
     // Add more questions here
 };
 
+std::unordered_map<std::string, User> users;
+
 std::string exec(const char* cmd) {
     std::array<char, 128> buffer;
     std::string result;
@@ -50,7 +59,6 @@ std::string compileAndRun(const std::string& code, const std::string& input) {
     temp << "int main() {\n";
     temp << "    " << input << "\n";
     temp << "    return 0;\n";
-    temp << "}\n";
     temp.close();
 
     // Compile
@@ -74,6 +82,50 @@ std::string compileAndRun(const std::string& code, const std::string& input) {
 int main() {
     crow::SimpleApp app;
 
+    CROW_ROUTE(app, "/api/register").methods("POST"_method)
+    ([](const crow::request& req) {
+        auto x = crow::json::load(req.body);
+        if (!x) return crow::response(400, "Invalid JSON");
+
+        std::string username = x["username"].s();
+        std::string password = x["password"].s();
+
+        if (users.find(username) != users.end()) {
+            return crow::response(400, "Username already exists");
+        }
+
+        users[username] = User{username, password, {}};
+        return crow::response(200, "User registered successfully");
+    });
+
+    CROW_ROUTE(app, "/api/login").methods("POST"_method)
+    ([](const crow::request& req) {
+        auto x = crow::json::load(req.body);
+        if (!x) return crow::response(400, "Invalid JSON");
+
+        std::string username = x["username"].s();
+        std::string password = x["password"].s();
+
+        if (users.find(username) == users.end() || users[username].password_hash != password) {
+            return crow::response(401, "Invalid username or password");
+        }
+
+        return crow::response(200, "Login successful");
+    });
+
+    CROW_ROUTE(app, "/api/progress").methods("GET"_method)
+    ([](const crow::request& req) {
+        std::string username = req.url_params.get("username");
+
+        if (users.find(username) == users.end()) {
+            return crow::response(404, "User not found");
+        }
+
+        crow::json::wvalue progress;
+        progress["solved"] = users[username].solved_questions;
+        return crow::response(progress);
+    });
+
     CROW_ROUTE(app, "/api/questions/<string>")
     ([](std::string difficulty) {
         for (const auto& q : questions) {
@@ -87,12 +139,11 @@ int main() {
     CROW_ROUTE(app, "/api/submit").methods("POST"_method)
     ([](const crow::request& req) {
         auto x = crow::json::load(req.body);
-        if (!x) {
-            return crow::response(400, "Invalid JSON");
-        }
+        if (!x) return crow::response(400, "Invalid JSON");
 
         std::string difficulty = x["difficulty"].s();
         std::string code = x["code"].s();
+        std::string username = x["username"].s();
 
         // Find the corresponding question
         Question* currentQuestion = nullptr;
@@ -123,6 +174,9 @@ int main() {
 
         if (allTestsPassed) {
             result << "All test cases passed!";
+            if (users.find(username) != users.end()) {
+                users[username].solved_questions.push_back(difficulty);
+            }
         }
 
         return crow::response(200, result.str());
