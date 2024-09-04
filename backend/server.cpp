@@ -30,11 +30,46 @@ std::vector<Question> questions = {
      "int sum(int a, int b) { return a + b; }",
      {{"1 2", "3"}, {"-1 5", "4"}, {"0 0", "0"}}
     },
+    {"basic",
+     "Write a C++ function to check if a number is even or odd.",
+     "bool isEven(int n) { return n % 2 == 0; }",
+     {{"4", "true"}, {"7", "false"}, {"0", "true"}}
+    },
+    {"basic",
+     "Write a C++ function to calculate the factorial of a non-negative integer.",
+     "int factorial(int n) { return (n <= 1) ? 1 : n * factorial(n - 1); }",
+     {{"5", "120"}, {"0", "1"}, {"3", "6"}}
+    },
     {"medium", 
      "Implement a C++ function to reverse a string in-place.",
      "void reverseString(std::string& s) { int left = 0, right = s.length() - 1; while (left < right) { std::swap(s[left++], s[right--]); } }",
      {{"hello", "olleh"}, {"OpenAI", "IAnapO"}, {"", ""}}
     },
+    {"medium",
+     "Write a C++ function to find the nth Fibonacci number.",
+     "int fibonacci(int n) { if (n <= 1) return n; int a = 0, b = 1; for (int i = 2; i <= n; i++) { int temp = b; b = a + b; a = temp; } return b; }",
+     {{"0", "0"}, {"1", "1"}, {"10", "55"}}
+    },
+    {"medium",
+     "Implement a C++ function to check if a string is a palindrome.",
+     "bool isPalindrome(const std::string& s) { int left = 0, right = s.length() - 1; while (left < right) { if (s[left++] != s[right--]) return false; } return true; }",
+     {{"racecar", "true"}, {"hello", "false"}, {"a", "true"}}
+    },
+    {"hard",
+     "Implement a C++ function to find the longest common subsequence of two strings.",
+     "int lcs(const std::string& X, const std::string& Y) { int m = X.length(), n = Y.length(); std::vector<std::vector<int>> L(m + 1, std::vector<int>(n + 1, 0)); for (int i = 1; i <= m; i++) { for (int j = 1; j <= n; j++) { if (X[i-1] == Y[j-1]) L[i][j] = L[i-1][j-1] + 1; else L[i][j] = std::max(L[i-1][j], L[i][j-1]); } } return L[m][n]; }",
+     {{"ABCDGH,AEDFHR", "3"}, {"AGGTAB,GXTXAYB", "4"}, {",", "0"}}
+    },
+    {"hard",
+     "Write a C++ function to implement the quicksort algorithm.",
+     "void quicksort(std::vector<int>& arr, int low, int high) { if (low < high) { int pi = partition(arr, low, high); quicksort(arr, low, pi - 1); quicksort(arr, pi + 1, high); } } int partition(std::vector<int>& arr, int low, int high) { int pivot = arr[high]; int i = low - 1; for (int j = low; j <= high - 1; j++) { if (arr[j] < pivot) { i++; std::swap(arr[i], arr[j]); } } std::swap(arr[i + 1], arr[high]); return i + 1; }",
+     {{"5,2,9,1,7,6,3", "1,2,3,5,6,7,9"}, {"1", "1"}, {"3,3,3,3", "3,3,3,3"}}
+    },
+    {"hard",
+     "Implement a C++ function to solve the N-Queens problem.",
+     "bool isSafe(std::vector<std::vector<int>>& board, int row, int col, int N) { for (int i = 0; i < col; i++) if (board[row][i]) return false; for (int i = row, j = col; i >= 0 && j >= 0; i--, j--) if (board[i][j]) return false; for (int i = row, j = col; j >= 0 && i < N; i++, j--) if (board[i][j]) return false; return true; } bool solveNQUtil(std::vector<std::vector<int>>& board, int col, int N) { if (col >= N) return true; for (int i = 0; i < N; i++) { if (isSafe(board, i, col, N)) { board[i][col] = 1; if (solveNQUtil(board, col + 1, N)) return true; board[i][col] = 0; } } return false; } bool solveNQ(int N) { std::vector<std::vector<int>> board(N, std::vector<int>(N, 0)); if (solveNQUtil(board, 0, N) == false) { std::cout << \"Solution does not exist\"; return false; } printSolution(board, N); return true; }",
+     {{"4", "0 0 1 0\n1 0 0 0\n0 0 0 1\n0 1 0 0\n"}, {"1", "1\n"}, {"3", "Solution does not exist"}}
+    }
     // Add more questions here
 };
 
