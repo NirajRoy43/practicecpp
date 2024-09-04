@@ -16,15 +16,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadQuestion(difficulty) {
         try {
-            const response = await fetch(`http://localhost:8080/api/questions/${difficulty}`);
+            const response = await fetch(`http://localhost:8080/api/questions/${difficulty}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': token || '',
+                    'Content-Type': 'application/json'
+                }
+            });
             if (!response.ok) {
-                throw new Error('Failed to fetch question');
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
             const questionText = await response.text();
             questionDisplay.textContent = questionText;
         } catch (error) {
             console.error('Error:', error);
-            questionDisplay.textContent = 'Failed to load question. Please try again.';
+            questionDisplay.textContent = `Failed to load question. Error: ${error.message}`;
         }
     }
 
@@ -54,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ 
                     difficulty: currentDifficulty, 
                     code: code,
-                    username: currentUser
+                    
                 }),
             });
             if (!response.ok) {
@@ -149,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Load initial question
-    loadQuestion(currentDifficulty);
+    loadQuestion('basic');
 
     // Initialize Ace Editor
     editor = ace.edit("code-editor");
