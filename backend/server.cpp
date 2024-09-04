@@ -1,4 +1,5 @@
 #include "../external/include/crow.h"
+#include "../external/include/jwt-cpp/jwt.h"
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -8,6 +9,7 @@
 #include <memory>
 #include <stdexcept>
 #include <array>
+#include <chrono>
 
 struct User {
     std::string username;
@@ -79,6 +81,32 @@ std::string compileAndRun(const std::string& code, const std::string& input) {
     return output;
 }
 
+const std::string JWT_SECRET = "your_secret_key_here"; // Change this to a secure random string
+
+std::string generateToken(const std::string& username) {
+    auto token = jwt::create()
+        .set_issuer("auth0")
+        .set_type("JWS")
+        .set_payload_claim("username", jwt::claim(username))
+        .set_issued_at(std::chrono::system_clock::now())
+        .set_expires_at(std::chrono::system_clock::now() + std::chrono::hours{1})
+        .sign(jwt::algorithm::hs256{JWT_SECRET});
+    return token;
+}
+
+bool verifyToken(const std::string& token) {
+    try {
+        auto decoded = jwt::decode(token);
+        auto verifier = jwt::verify()
+            .allow_algorithm(jwt::algorithm::hs256{JWT_SECRET})
+            .with_issuer("auth0");
+        verifier.verify(decoded);
+        return true;
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
 int main() {
     crow::SimpleApp app;
 
@@ -110,12 +138,22 @@ int main() {
             return crow::response(401, "Invalid username or password");
         }
 
-        return crow::response(200, "Login successful");
+        std::string token = generateToken(username);
+        crow::json::wvalue response;
+        response["token"] = token;
+        return crow::response(200, response);
+
     });
 
     CROW_ROUTE(app, "/api/progress").methods("GET"_method)
     ([](const crow::request& req) {
-        std::string username = req.url_params.get("username");
+        std::string token = req.get_header_value("Authorization");
+        if (token.empty() || !verifyToken(token)) {
+            return crow::response(401, "Unauthorized");
+        }
+
+        auto decoded = jwt::decode(token);
+        std::string username = decoded.get_payload_claim("username").as_string();
 
         if (users.find(username) == users.end()) {
             return crow::response(404, "User not found");
@@ -125,6 +163,7 @@ int main() {
         progress["solved"] = users[username].solved_questions;
         return crow::response(progress);
     });
+
 
     CROW_ROUTE(app, "/api/questions/<string>")
     ([](std::string difficulty) {
