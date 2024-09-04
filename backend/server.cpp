@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <array>
 #include <chrono>
+#include <iostream>
 
 struct User {
     std::string username;
@@ -116,7 +117,7 @@ std::string compileAndRun(const std::string& code, const std::string& input) {
     return output;
 }
 
-const std::string JWT_SECRET = "your_secret_key_here"; // Change this to a secure random string
+const std::string JWT_SECRET = "rytertswetwestryertwtwetrwesdrtedrt"; // Change this to a secure random string
 
 std::string generateToken(const std::string& username) {
     auto token = jwt::create()
@@ -145,41 +146,63 @@ bool verifyToken(const std::string& token) {
 int main() {
     crow::SimpleApp app;
 
-    CROW_ROUTE(app, "/api/register").methods("POST"_method)
-    ([](const crow::request& req) {
-        auto x = crow::json::load(req.body);
-        if (!x) return crow::response(400, "Invalid JSON");
+    auto& cors = app.get_middleware<crow::CORSHandler>();
+    cors
+      .global()
+      .headers("Content-Type")
+      .methods("POST"_method, "GET"_method);
 
+   CROW_ROUTE(app, "/api/register").methods("POST"_method)
+    ([](const crow::request& req) {
+        std::cout << "Received registration request" << std::endl;
+        auto x = crow::json::load(req.body);
+        if (!x) {
+            std::cout << "Invalid JSON in registration request" << std::endl;
+            return crow::response(400, "Invalid JSON");
+        }
+        
         std::string username = x["username"].s();
         std::string password = x["password"].s();
 
+        std::cout << "Attempting to register user: " << username << std::endl;
+
         if (users.find(username) != users.end()) {
+            std::cout << "Registration failed: Username already exists" << std::endl;
             return crow::response(400, "Username already exists");
         }
 
-        users[username] = User{username, password, {}};
+
+       users[username] = User{username, password, {}};
+        std::cout << "User registered successfully: " << username << std::endl;
         return crow::response(200, "User registered successfully");
     });
 
     CROW_ROUTE(app, "/api/login").methods("POST"_method)
     ([](const crow::request& req) {
+        std::cout << "Received login request" << std::endl;
         auto x = crow::json::load(req.body);
-        if (!x) return crow::response(400, "Invalid JSON");
+        if (!x) {
+            std::cout << "Invalid JSON in login request" << std::endl;
+            return crow::response(400, "Invalid JSON");
+        }
 
         std::string username = x["username"].s();
         std::string password = x["password"].s();
 
+        std::cout << "Attempting to log in user: " << username << std::endl;
+
         if (users.find(username) == users.end() || users[username].password_hash != password) {
+            std::cout << "Login failed: Invalid username or password" << std::endl;
             return crow::response(401, "Invalid username or password");
         }
 
         std::string token = generateToken(username);
+        std::cout << "Login successful for user: " << username << std::endl;
         crow::json::wvalue response;
         response["token"] = token;
         return crow::response(200, response);
-
     });
-
+    
     CROW_ROUTE(app, "/api/progress").methods("GET"_method)
     ([](const crow::request& req) {
         std::string token = req.get_header_value("Authorization");
@@ -200,13 +223,16 @@ int main() {
     });
 
 
-    CROW_ROUTE(app, "/api/questions/<string>")
+    CROW_ROUTE(app, "/api/questions/<string>").methods("GET"_method)
     ([](std::string difficulty) {
+        std::cout << "Received request for " << difficulty << " question" << std::endl;
         for (const auto& q : questions) {
             if (q.difficulty == difficulty) {
-                return crow::response(q.text);
+                std::cout << "Returning question: " << q.text << std::endl;
+                return crow::response(200, q.text);
             }
         }
+        std::cout << "Question not found for difficulty: " << difficulty << std::endl;
         return crow::response(404, "Question not found");
     });
 
@@ -256,5 +282,6 @@ int main() {
         return crow::response(200, result.str());
     });
 
+    std::cout << "Starting server on port 8080" << std::endl;
     app.port(8080).multithreaded().run();
 }
