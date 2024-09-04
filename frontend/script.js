@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentDifficulty = 'basic';
     let editor;
     let currentUser = null;
+    let token = localStorage.getItem('token');
+
 
     async function loadQuestion(difficulty) {
         try {
@@ -35,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     submitButton.addEventListener('click', async () => {
-        if (!currentUser) {
+        if (!token) {
             resultDisplay.textContent = "Please log in to submit your code.";
             return;
         }
@@ -47,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': token
                 },
                 body: JSON.stringify({ 
                     difficulty: currentDifficulty, 
@@ -121,10 +124,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function loadProgress() {
-        if (!currentUser) return;
+        if (!token) return;
 
         try {
-            const response = await fetch(`http://localhost:8080/api/progress?username=${currentUser}`);
+            const response = await fetch(`http://localhost:8080/api/progress`, {
+                headers: {
+                    'Authorization': token
+                }
+            });
             if (!response.ok) {
                 throw new Error('Failed to fetch progress');
             }
@@ -134,6 +141,11 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error:', error);
             progressDisplay.textContent = 'Failed to load progress.';
         }
+    }
+
+    // Check if user is already logged in
+    if (token) {
+        loadProgress();
     }
 
     // Load initial question
